@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Cruzr</string>
+    <string name="cruzr_application">Cruzr Application</string>
+    <string name="action_1">ROS Version</string>
+    <string name="action_2">ROS IP</string>
+    <string name="dummy_text">0</string>
+</resources>
