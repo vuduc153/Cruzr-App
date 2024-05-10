@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -56,14 +57,22 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.moveForward).setOnClickListener(v -> {
             int ret = RosRobotApi.get().moveToward(0.1f, 0, 0);
-            Log.i("MOVE", Integer.toString(ret));
+            if (ret == 0) {
+                Toast.makeText(this, "Cannot perform move action", Toast.LENGTH_SHORT).show();
+            }
+            if (ret == 1) {
+                Toast.makeText(this, "Forbidden by application layer", Toast.LENGTH_SHORT).show();
+            }
         });
 
         findViewById(R.id.stopMove).setOnClickListener(v -> RosRobotApi.get().stopMove());
 
         findViewById(R.id.toggleLed).setOnClickListener(v -> {
             ledState = !ledState;
-            RosRobotApi.get().ledSetOnOff(ledState);
+            int ret = RosRobotApi.get().ledSetOnOff(ledState);
+            if (ret == 0) {
+                Toast.makeText(this, "Cannot change LED state", Toast.LENGTH_SHORT).show();
+            }
         });
 
         findViewById(R.id.showCamera).setOnClickListener(v -> {
@@ -73,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.playAudio).setOnClickListener(v -> playAudio());
+
+        findViewById(R.id.dance).setOnClickListener(v -> dance());
     }
 
     @Override
@@ -110,6 +121,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("CAMERA", "Camera provider future failed " + e);
             } catch (IllegalStateException | IllegalArgumentException e) {
                 Log.e("CAMERA", "Binding failed " + e);
+            } finally {
+                Toast.makeText(this, "Could not open camera", Toast.LENGTH_SHORT).show();
             }
         }, ContextCompat.getMainExecutor(this));
     }
@@ -125,6 +138,15 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.prepareAsync();
         } catch (IllegalArgumentException | IOException e) {
             Log.e("AUDIO", "Could not open audio source " + e);
+        } finally {
+            Toast.makeText(this, "Could not open audio source", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void dance() {
+        int ret = RosRobotApi.get().run("cute");
+        if (ret == 0) {
+            Toast.makeText(this, "Cannot perform action", Toast.LENGTH_SHORT).show();
         }
     }
 
