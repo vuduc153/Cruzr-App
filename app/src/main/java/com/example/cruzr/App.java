@@ -14,7 +14,7 @@ public class App extends Application {
         RosRobotApi.get().initializ(this, new InitListener() {
             @Override
             public void onInit() {
-                Log.i("App", "ROS API initialization succeeded");
+                Log.i("APP", "ROS API initialization succeeded");
             }
         });
     }

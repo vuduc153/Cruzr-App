@@ -1,7 +1,10 @@
 <resources>
     <string name="app_name">Cruzr</string>
-    <string name="cruzr_application">Cruzr Application</string>
     <string name="action_1">ROS Version</string>
     <string name="action_2">ROS IP</string>
-    <string name="dummy_text">0</string>
+    <string name="dummy_text">Cruzr Application</string>
+    <string name="toggle_led">Toggle LED</string>
+    <string name="stop_move">Stop move</string>
+    <string name="move_forward">Move forward</string>
+    <string name="open_camera">Open camera</string>
 </resources>
