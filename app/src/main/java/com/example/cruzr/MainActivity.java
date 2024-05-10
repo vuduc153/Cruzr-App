@@ -1,6 +1,8 @@
 package com.example.cruzr;
 
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,19 +22,18 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
     private boolean ledState = false;
     private TextView textView;
     private PreviewView previewView;
-    private ExecutorService cameraExecutor;
+    private MediaPlayer mediaPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
         textView = findViewById(R.id.dummyText);
         previewView = findViewById(R.id.viewFinder);
+        initMediaPlayer();
 
         findViewById(R.id.showRosVersion).setOnClickListener(v -> textView.setText(RosRobotApi.get().getRosVersion()));
 
@@ -70,13 +72,19 @@ public class MainActivity extends AppCompatActivity {
             startCamera();
         });
 
-        cameraExecutor = Executors.newSingleThreadExecutor();
+        findViewById(R.id.playAudio).setOnClickListener(v -> playAudio());
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        cameraExecutor.shutdown();
+    protected void onStop() {
+        super.onStop();
+        releaseMediaPlayer();
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        initMediaPlayer();
     }
 
     private boolean allPermissionsGranted() {
@@ -104,6 +112,36 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("CAMERA", "Binding failed " + e);
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void playAudio() {
+        if (mediaPlayer == null) initMediaPlayer();
+        String audioUrl = "https://www2.cs.uic.edu/~i101/SoundFiles/CantinaBand3.wav";
+        try {
+            mediaPlayer.stop();
+            mediaPlayer.reset();
+            mediaPlayer.setDataSource(audioUrl);
+            mediaPlayer.setOnPreparedListener(MediaPlayer::start);
+            mediaPlayer.prepareAsync();
+        } catch (IllegalArgumentException | IOException e) {
+            Log.e("AUDIO", "Could not open audio source " + e);
+        }
+    }
+
+    private void initMediaPlayer() {
+        mediaPlayer = new MediaPlayer();
+        mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .build());
+    }
+
+    private void releaseMediaPlayer() {
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
     }
 
     public static final String[] REQUIRED_PERMISSIONS;

@@ -51,9 +51,20 @@
         android:layout_height="wrap_content"
         android:text="@string/open_camera"
         app:layout_constraintBottom_toBottomOf="@+id/showRosIP"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/playAudio"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/showRosIP"
+        app:layout_constraintTop_toTopOf="@+id/showRosIP" />
+
+    <Button
+        android:id="@+id/playAudio"
+        android:layout_width="140dp"
+        android:layout_height="wrap_content"
+        android:text="Play audio"
+        app:layout_constraintBottom_toBottomOf="@+id/showRosIP"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/showCamera"
         app:layout_constraintTop_toTopOf="@+id/showRosIP" />
 
     <Button
