@@ -137,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.setOnPreparedListener(MediaPlayer::start);
             mediaPlayer.prepareAsync();
         } catch (IllegalArgumentException | IOException e) {
-            Log.e("AUDIO", "Could not open audio source " + e);
+            Log.e("AUDIO", "Audio source not found " + e);
         } finally {
             Toast.makeText(this, "Could not open audio source", Toast.LENGTH_SHORT).show();
         }
