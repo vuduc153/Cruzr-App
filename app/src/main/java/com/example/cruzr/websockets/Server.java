@@ -2,6 +2,8 @@ package com.example.cruzr.websockets;
 
 import android.util.Log;
 
+import com.example.cruzr.robot.ApiClient;
+
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -10,8 +12,11 @@ import java.net.InetSocketAddress;
 
 public class Server extends WebSocketServer {
 
+    private ApiClient api;
+
     public Server(InetSocketAddress address) {
         super(address);
+        api = ApiClient.getInstance();
     }
 
     @Override
@@ -28,6 +33,7 @@ public class Server extends WebSocketServer {
     @Override
     public void onMessage(WebSocket conn, String message) {
         Log.i("SERVER", "Received message: " + message);
+        api.callFromJSONString(message);
     }
 
     @Override

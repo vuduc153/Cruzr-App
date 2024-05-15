@@ -20,9 +20,12 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.cruzr.websockets.SSLContextHelper;
 import com.example.cruzr.websockets.Server;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
+
+import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,6 +33,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+
+import javax.net.ssl.SSLContext;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -177,9 +182,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startWebsocketServer() {
-        InetSocketAddress address = new InetSocketAddress("0.0.0.0", 8080);
-        server = new Server(address);
-        server.start();
+        try {
+            InetSocketAddress address = new InetSocketAddress("0.0.0.0", 8080);
+            SSLContext sslContext = SSLContextHelper.createSSLContext(this);
+            server = new Server(address);
+            server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
+            server.start();
+        } catch (Exception exception) {
+            stopWebSocketServer();
+            Toast.makeText(this, "Cannot start Websocket server", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void stopWebSocketServer() {
