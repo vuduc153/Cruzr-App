@@ -54,4 +54,5 @@ dependencies {
     implementation "androidx.camera:camera-video:${camerax_version}"
     implementation "androidx.camera:camera-view:${camerax_version}"
     implementation "androidx.camera:camera-extensions:${camerax_version}"
+    implementation 'org.java-websocket:Java-WebSocket:1.5.2'
 }

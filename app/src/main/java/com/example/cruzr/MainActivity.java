@@ -20,10 +20,12 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.cruzr.websockets.Server;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.CancellationException;
@@ -35,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textView;
     private PreviewView previewView;
     private MediaPlayer mediaPlayer;
+    private Server server;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
         textView = findViewById(R.id.dummyText);
         previewView = findViewById(R.id.viewFinder);
         initMediaPlayer();
+        startWebsocketServer();
 
         findViewById(R.id.showRosVersion).setOnClickListener(v -> textView.setText(RosRobotApi.get().getRosVersion()));
 
@@ -96,6 +100,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onRestart() {
         super.onRestart();
         initMediaPlayer();
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopWebSocketServer();
+        super.onDestroy();
     }
 
     private boolean allPermissionsGranted() {
@@ -163,6 +173,23 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.stop();
             mediaPlayer.release();
             mediaPlayer = null;
+        }
+    }
+
+    private void startWebsocketServer() {
+        InetSocketAddress address = new InetSocketAddress("0.0.0.0", 8080);
+        server = new Server(address);
+        server.start();
+    }
+
+    private void stopWebSocketServer() {
+        if (server != null) {
+            try {
+                server.stop();
+                Log.i("SERVER", "WebSocket server stopped");
+            } catch (InterruptedException e) {
+                Log.e("SERVER", "Shutdown process interrupted");
+            }
         }
     }
 
