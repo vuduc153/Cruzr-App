@@ -8,7 +8,7 @@ import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-public class MoveCommand extends RobotCommand {
+public class MoveCommand implements RobotCommand {
 
     public MoveCommand() {}
 
