@@ -2,7 +2,7 @@ package com.example.cruzr.websockets;
 
 import android.util.Log;
 
-import com.example.cruzr.robot.ApiClient;
+import com.example.cruzr.robot.RobotCommandInvoker;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -12,11 +12,11 @@ import java.net.InetSocketAddress;
 
 public class Server extends WebSocketServer {
 
-    private ApiClient api;
+    private RobotCommandInvoker api;
 
     public Server(InetSocketAddress address) {
         super(address);
-        api = ApiClient.getInstance();
+        api = RobotCommandInvoker.getInstance();
     }
 
     @Override

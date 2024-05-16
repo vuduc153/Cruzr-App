@@ -109,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        RosRobotApi.get().destory();
         stopWebSocketServer();
         super.onDestroy();
     }
@@ -183,7 +184,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void startWebsocketServer() {
         try {
-            InetSocketAddress address = new InetSocketAddress("0.0.0.0", 8080);
+//            InetSocketAddress address = new InetSocketAddress("0.0.0.0", 8080); for testing on emulator
+            InetSocketAddress address = new InetSocketAddress(8080); // for testing on Cruzr
             SSLContext sslContext = SSLContextHelper.createSSLContext(this);
             server = new Server(address);
             server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
