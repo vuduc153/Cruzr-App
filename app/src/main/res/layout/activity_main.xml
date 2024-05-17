@@ -29,9 +29,20 @@
         android:layout_height="wrap_content"
         android:text="Play audio"
         app:layout_constraintBottom_toBottomOf="@+id/showRosIP"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/dance"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/showCamera"
+        app:layout_constraintTop_toTopOf="@+id/showRosIP" />
+
+    <Button
+        android:id="@+id/dance"
+        android:layout_width="140dp"
+        android:layout_height="wrap_content"
+        android:text="@string/dance"
+        app:layout_constraintBottom_toBottomOf="@+id/showRosIP"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/playAudio"
         app:layout_constraintTop_toTopOf="@+id/showRosIP" />
 
     <Button
@@ -84,20 +95,31 @@
         android:layout_height="wrap_content"
         android:text="@string/toggle_led"
         app:layout_constraintBottom_toBottomOf="@+id/stopMove"
-        app:layout_constraintEnd_toStartOf="@+id/dance"
+        app:layout_constraintEnd_toStartOf="@+id/startCall"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/stopMove"
         app:layout_constraintTop_toTopOf="@+id/stopMove" />
 
     <Button
-        android:id="@+id/dance"
+        android:id="@+id/startCall"
         android:layout_width="140dp"
         android:layout_height="wrap_content"
-        android:text="@string/dance"
+        android:text="@string/start_call"
+        app:layout_constraintBottom_toBottomOf="@+id/stopMove"
+        app:layout_constraintEnd_toStartOf="@+id/endCall"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/toggleLed"
+        app:layout_constraintTop_toTopOf="@+id/stopMove" />
+
+    <Button
+        android:id="@+id/endCall"
+        android:layout_width="140dp"
+        android:layout_height="wrap_content"
+        android:text="@string/end_call"
         app:layout_constraintBottom_toBottomOf="@+id/stopMove"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/toggleLed"
+        app:layout_constraintStart_toEndOf="@+id/startCall"
         app:layout_constraintTop_toTopOf="@+id/stopMove" />
 
     <TextView

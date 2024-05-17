@@ -28,19 +28,11 @@ public class RobotCommandInvoker {
         return instance;
     }
 
-    public void callFromJSONString(String json) {
-        JSONObject obj;
-        try {
-            obj = new JSONObject(json);
-            String action = obj.getString("action");
-            JSONArray parameters = obj.getJSONArray("params");
-            if (commandRegistry.containsKey(action)) {
-                commandRegistry.get(action).execute(parameters);
-            } else {
-                throw new JSONException("Invalid keyword for action");
-            }
-        } catch (JSONException exception) {
-            Log.e("SERVER", "Invalid message from Websocket client " + exception);
+    public void execute(String type, JSONArray parameters) {
+        if (commandRegistry.containsKey(type)) {
+            commandRegistry.get(type).execute(parameters);
+        } else {
+            Log.e("API", "Invalid keyword for action type");
         }
     }
 }

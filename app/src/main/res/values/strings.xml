@@ -8,4 +8,6 @@
     <string name="move_forward">Move forward</string>
     <string name="open_camera">Open camera</string>
     <string name="dance">Dance</string>
+    <string name="end_call">End call</string>
+    <string name="start_call">Start call</string>
 </resources>

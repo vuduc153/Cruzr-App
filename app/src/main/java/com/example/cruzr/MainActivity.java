@@ -20,17 +20,34 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.cruzr.webrtc.CandidateObserver;
+import com.example.cruzr.webrtc.CustomPeerConnectionObserver;
+import com.example.cruzr.webrtc.SDPOfferObserver;
 import com.example.cruzr.websockets.SSLContextHelper;
 import com.example.cruzr.websockets.Server;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
+import org.webrtc.AudioSource;
+import org.webrtc.AudioTrack;
+import org.webrtc.Camera1Enumerator;
+import org.webrtc.CameraEnumerator;
+import org.webrtc.EglBase;
+import org.webrtc.MediaConstraints;
+import org.webrtc.MediaStream;
+import org.webrtc.PeerConnection;
+import org.webrtc.PeerConnectionFactory;
+import org.webrtc.SurfaceTextureHelper;
+import org.webrtc.VideoCapturer;
+import org.webrtc.VideoSource;
+import org.webrtc.VideoTrack;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
@@ -43,6 +60,11 @@ public class MainActivity extends AppCompatActivity {
     private PreviewView previewView;
     private MediaPlayer mediaPlayer;
     private Server server;
+    private PeerConnectionFactory peerConnectionFactory;
+    private PeerConnection peerConnection;
+    private VideoTrack localVideoTrack;
+    private AudioTrack localAudioTrack;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
 
         textView = findViewById(R.id.dummyText);
         previewView = findViewById(R.id.viewFinder);
+
         initMediaPlayer();
         startWebsocketServer();
 
@@ -93,6 +116,22 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.playAudio).setOnClickListener(v -> playAudio());
 
         findViewById(R.id.dance).setOnClickListener(v -> dance());
+
+        findViewById(R.id.startCall).setOnClickListener(v -> {
+            if (server == null) {
+                Toast.makeText(this, "Websocket server is not running", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            setupPeerConnection();
+            startStream();
+        });
+
+        findViewById(R.id.endCall).setOnClickListener(v -> {
+            if (peerConnection != null) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+        });
     }
 
     @Override
@@ -110,6 +149,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         RosRobotApi.get().destory();
+        peerConnection.close();
         stopWebSocketServer();
         super.onDestroy();
     }
@@ -205,6 +245,72 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("SERVER", "Shutdown process interrupted");
             }
         }
+    }
+
+    private void setupPeerConnection() {
+        EglBase eglBase = EglBase.create();
+        PeerConnectionFactory.InitializationOptions initializationOptions =
+                PeerConnectionFactory.InitializationOptions.builder(this)
+                        .createInitializationOptions();
+        PeerConnectionFactory.initialize(initializationOptions);
+
+        PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+        peerConnectionFactory = PeerConnectionFactory.builder()
+                .setOptions(options)
+                .createPeerConnectionFactory();
+
+        VideoCapturer videoCapturer = createCameraCapture(new Camera1Enumerator(false));
+        if (videoCapturer == null) {
+            Log.e("MYRTC", "Cannot find camera capture");
+            return;
+        }
+        VideoSource videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
+        videoCapturer.initialize(SurfaceTextureHelper.create("CaptureThread", eglBase.getEglBaseContext()),
+                this, videoSource.getCapturerObserver());
+        localVideoTrack = peerConnectionFactory.createVideoTrack("100", videoSource);
+
+        AudioSource audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
+        localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
+
+        videoCapturer.startCapture(1024, 720, 30);
+        peerConnection = createPeerConnection();
+
+        server.setOnOfferObserver(new SDPOfferObserver(peerConnection, server));
+        server.setOnCandidateObserver(new CandidateObserver(peerConnection, server));
+    }
+
+    private PeerConnection createPeerConnection() {
+        List<PeerConnection.IceServer> iceServers = new ArrayList<>();
+        iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer());
+        return peerConnectionFactory.createPeerConnection(iceServers, new CustomPeerConnectionObserver(server));
+    }
+
+    private VideoCapturer createCameraCapture(CameraEnumerator enumerator) {
+        final String[] deviceNames = enumerator.getDeviceNames();
+        for (String deviceName : deviceNames) {
+            if (enumerator.isFrontFacing(deviceName)) {
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+                if (videoCapturer != null) {
+                    return videoCapturer;
+                }
+            }
+        }
+        for (String deviceName : deviceNames) {
+            if (!enumerator.isFrontFacing(deviceName)) {
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+                if (videoCapturer != null) {
+                    return videoCapturer;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void startStream() {
+        MediaStream stream = peerConnectionFactory.createLocalMediaStream("CRUZR");
+        stream.addTrack(localVideoTrack);
+        stream.addTrack(localAudioTrack);
+        peerConnection.addStream(stream);
     }
 
     public static final String[] REQUIRED_PERMISSIONS;
