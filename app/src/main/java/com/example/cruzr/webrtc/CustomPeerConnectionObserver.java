@@ -6,20 +6,25 @@ import com.example.cruzr.websockets.Server;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.webrtc.AudioTrack;
 import org.webrtc.DataChannel;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.RtpReceiver;
+import org.webrtc.SurfaceViewRenderer;
+import org.webrtc.VideoTrack;
 
 import java.util.Arrays;
 
 public class CustomPeerConnectionObserver implements PeerConnection.Observer {
 
     protected Server wsServer;
+    private final SurfaceViewRenderer remoteView;
 
-    public CustomPeerConnectionObserver(Server wsServer) {
+    public CustomPeerConnectionObserver(Server wsServer, SurfaceViewRenderer remoteView) {
         this.wsServer = wsServer;
+        this.remoteView = remoteView;
     }
 
     @Override
@@ -67,11 +72,18 @@ public class CustomPeerConnectionObserver implements PeerConnection.Observer {
     @Override
     public void onAddStream(MediaStream mediaStream) {
         Log.i("MYRTC", "onAddStream " + mediaStream);
+        VideoTrack remoteVideoTrack = mediaStream.videoTracks.get(0);
+        remoteVideoTrack.setEnabled(true);
+//        AudioTrack remoteAudioTrack = mediaStream.audioTracks.get(0);
+//        remoteAudioTrack.setEnabled(true);
+        remoteVideoTrack.addSink(remoteView);
     }
 
     @Override
     public void onRemoveStream(MediaStream mediaStream) {
         Log.i("MYRTC", "onRemoveStream " + mediaStream);
+        VideoTrack remoteVideoTrack = mediaStream.videoTracks.get(0);
+        remoteVideoTrack.removeSink(remoteView);
     }
 
     @Override
@@ -87,5 +99,13 @@ public class CustomPeerConnectionObserver implements PeerConnection.Observer {
     @Override
     public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
         Log.i("MYRTC", "onAddTrack " + rtpReceiver + Arrays.toString(mediaStreams));
+    }
+
+    @Override
+    public void onConnectionChange(final PeerConnection.PeerConnectionState newState) {
+        Log.i("MYRTC", "onConnectionChange " + newState);
+        if (newState == PeerConnection.PeerConnectionState.CLOSED) {
+//            events.onConnected();
+        }
     }
 }

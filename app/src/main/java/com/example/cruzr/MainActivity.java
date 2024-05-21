@@ -31,15 +31,20 @@ import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
-import org.webrtc.Camera1Enumerator;
+import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
+import org.webrtc.DefaultVideoDecoderFactory;
+import org.webrtc.DefaultVideoEncoderFactory;
 import org.webrtc.EglBase;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SurfaceTextureHelper;
+import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoCapturer;
+import org.webrtc.VideoDecoderFactory;
+import org.webrtc.VideoEncoderFactory;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 
@@ -55,6 +60,10 @@ import javax.net.ssl.SSLContext;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String AUDIO_ECHO_CANCELLATION_CONSTRAINT = "googEchoCancellation";
+    private static final String AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT = "googAutoGainControl";
+    private static final String AUDIO_HIGH_PASS_FILTER_CONSTRAINT = "googHighpassFilter";
+    private static final String AUDIO_NOISE_SUPPRESSION_CONSTRAINT = "googNoiseSuppression";
     private boolean ledState = false;
     private TextView textView;
     private PreviewView previewView;
@@ -62,8 +71,13 @@ public class MainActivity extends AppCompatActivity {
     private Server server;
     private PeerConnectionFactory peerConnectionFactory;
     private PeerConnection peerConnection;
+    VideoCapturer videoCapturer;
     private VideoTrack localVideoTrack;
     private AudioTrack localAudioTrack;
+    private VideoSource videoSource;
+    private AudioSource audioSource;
+    private SurfaceViewRenderer remoteView;
+    private EglBase eglBase;
 
 
     @Override
@@ -77,8 +91,12 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        eglBase = EglBase.create();
+
         textView = findViewById(R.id.dummyText);
         previewView = findViewById(R.id.viewFinder);
+        remoteView = findViewById(R.id.remoteView);
+        remoteView.init(eglBase.getEglBaseContext(), null);
 
         initMediaPlayer();
         startWebsocketServer();
@@ -126,17 +144,13 @@ public class MainActivity extends AppCompatActivity {
             startStream();
         });
 
-        findViewById(R.id.endCall).setOnClickListener(v -> {
-            if (peerConnection != null) {
-                peerConnection.close();
-                peerConnection = null;
-            }
-        });
+        findViewById(R.id.endCall).setOnClickListener(v -> closePeerConnection());
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        closePeerConnection();
         releaseMediaPlayer();
     }
 
@@ -149,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         RosRobotApi.get().destory();
-        peerConnection.close();
+        closePeerConnection();
         stopWebSocketServer();
         super.onDestroy();
     }
@@ -248,31 +262,49 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupPeerConnection() {
-        EglBase eglBase = EglBase.create();
         PeerConnectionFactory.InitializationOptions initializationOptions =
                 PeerConnectionFactory.InitializationOptions.builder(this)
                         .createInitializationOptions();
         PeerConnectionFactory.initialize(initializationOptions);
 
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+
+        VideoEncoderFactory encoderFactory = new DefaultVideoEncoderFactory(eglBase.getEglBaseContext(), true, true);
+        VideoDecoderFactory decoderFactory = new DefaultVideoDecoderFactory(eglBase.getEglBaseContext());
+
         peerConnectionFactory = PeerConnectionFactory.builder()
                 .setOptions(options)
+                .setVideoDecoderFactory(decoderFactory)
+                .setVideoEncoderFactory(encoderFactory)
                 .createPeerConnectionFactory();
 
-        VideoCapturer videoCapturer = createCameraCapture(new Camera1Enumerator(false));
+        videoCapturer = createCameraCapture(new Camera2Enumerator(this));
         if (videoCapturer == null) {
             Log.e("MYRTC", "Cannot find camera capture");
             return;
         }
-        VideoSource videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
+
+        videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
         videoCapturer.initialize(SurfaceTextureHelper.create("CaptureThread", eglBase.getEglBaseContext()),
                 this, videoSource.getCapturerObserver());
         localVideoTrack = peerConnectionFactory.createVideoTrack("100", videoSource);
+        localVideoTrack.setEnabled(true);
 
-        AudioSource audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
+        MediaConstraints audioConstraints = new MediaConstraints();
+        audioConstraints.mandatory.add(
+                new MediaConstraints.KeyValuePair(AUDIO_ECHO_CANCELLATION_CONSTRAINT, "true"));
+        audioConstraints.mandatory.add(
+                new MediaConstraints.KeyValuePair(AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT, "true"));
+        audioConstraints.mandatory.add(
+                new MediaConstraints.KeyValuePair(AUDIO_HIGH_PASS_FILTER_CONSTRAINT, "true"));
+        audioConstraints.mandatory.add(
+                new MediaConstraints.KeyValuePair(AUDIO_NOISE_SUPPRESSION_CONSTRAINT, "true"));
+
+        audioSource = peerConnectionFactory.createAudioSource(audioConstraints);
         localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
+        localAudioTrack.setEnabled(true);
 
-        videoCapturer.startCapture(1024, 720, 30);
+        videoCapturer.startCapture(1280, 720, 30);
         peerConnection = createPeerConnection();
 
         server.setOnOfferObserver(new SDPOfferObserver(peerConnection, server));
@@ -282,7 +314,7 @@ public class MainActivity extends AppCompatActivity {
     private PeerConnection createPeerConnection() {
         List<PeerConnection.IceServer> iceServers = new ArrayList<>();
         iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer());
-        return peerConnectionFactory.createPeerConnection(iceServers, new CustomPeerConnectionObserver(server));
+        return peerConnectionFactory.createPeerConnection(iceServers, new CustomPeerConnectionObserver(server, remoteView));
     }
 
     private VideoCapturer createCameraCapture(CameraEnumerator enumerator) {
@@ -304,6 +336,45 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return null;
+    }
+
+    private void closePeerConnection() {
+        if (localVideoTrack != null) {
+            localVideoTrack.dispose();
+            localVideoTrack = null;
+        }
+
+        if (videoSource != null) {
+            videoSource.dispose();
+            videoSource = null;
+        }
+
+        if (localAudioTrack != null) {
+            localAudioTrack.dispose();
+            localAudioTrack = null;
+        }
+
+        if (audioSource != null) {
+            audioSource.dispose();
+            audioSource = null;
+        }
+
+        remoteView.clearImage();
+
+        if (videoCapturer != null) {
+            try {
+                videoCapturer.stopCapture();
+            } catch (InterruptedException e) {
+                Log.e("MYRTC", "Cannot close videoCapturer " + e);
+            }
+            videoCapturer.dispose();
+            videoCapturer = null;
+        }
+
+        if (peerConnection != null) {
+            peerConnection.close();
+            peerConnection = null;
+        }
     }
 
     private void startStream() {
