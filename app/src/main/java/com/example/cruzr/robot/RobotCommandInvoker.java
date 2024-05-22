@@ -2,11 +2,7 @@ package com.example.cruzr.robot;
 
 import android.util.Log;
 
-import com.example.cruzr.interfaces.RobotCommand;
-
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;

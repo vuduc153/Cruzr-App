@@ -1,6 +1,5 @@
 package com.example.cruzr.robot;
 
-import com.example.cruzr.interfaces.RobotCommand;
 import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 
 import org.json.JSONArray;

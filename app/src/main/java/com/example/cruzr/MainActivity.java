@@ -1,3 +1,6 @@
+// Following the same class structure as in
+// https://webrtc.googlesource.com/src/+/refs/heads/main/examples/androidapp/src/org/appspot/apprtc/CallActivity.java
+
 package com.example.cruzr;
 
 import android.content.pm.PackageManager;
@@ -5,6 +8,8 @@ import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,26 +25,31 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.cruzr.webrtc.CandidateObserver;
-import com.example.cruzr.webrtc.CustomPeerConnectionObserver;
-import com.example.cruzr.webrtc.SDPOfferObserver;
 import com.example.cruzr.websockets.SSLContextHelper;
 import com.example.cruzr.websockets.Server;
+import com.example.cruzr.webrtc.SignalingEvents;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
 import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
+import org.webrtc.DataChannel;
 import org.webrtc.DefaultVideoDecoderFactory;
 import org.webrtc.DefaultVideoEncoderFactory;
 import org.webrtc.EglBase;
+import org.webrtc.IceCandidate;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
+import org.webrtc.RtpReceiver;
+import org.webrtc.SdpObserver;
+import org.webrtc.SessionDescription;
 import org.webrtc.SurfaceTextureHelper;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoCapturer;
@@ -58,7 +68,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.net.ssl.SSLContext;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SignalingEvents, PeerConnection.Observer {
 
     private static final String AUDIO_ECHO_CANCELLATION_CONSTRAINT = "googEchoCancellation";
     private static final String AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT = "googAutoGainControl";
@@ -71,11 +81,13 @@ public class MainActivity extends AppCompatActivity {
     private Server server;
     private PeerConnectionFactory peerConnectionFactory;
     private PeerConnection peerConnection;
-    VideoCapturer videoCapturer;
+    private VideoCapturer videoCapturer;
     private VideoTrack localVideoTrack;
     private AudioTrack localAudioTrack;
     private VideoSource videoSource;
     private AudioSource audioSource;
+    private VideoTrack remoteVideoTrack;
+    private AudioTrack remoteAudioTrack;
     private SurfaceViewRenderer remoteView;
     private EglBase eglBase;
 
@@ -151,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         closePeerConnection();
+        stopWebSocketServer();
         releaseMediaPlayer();
     }
 
@@ -158,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onRestart() {
         super.onRestart();
         initMediaPlayer();
+        startWebsocketServer();
     }
 
     @Override
@@ -165,6 +179,7 @@ public class MainActivity extends AppCompatActivity {
         RosRobotApi.get().destory();
         closePeerConnection();
         stopWebSocketServer();
+        releaseMediaPlayer();
         super.onDestroy();
     }
 
@@ -241,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
 //            InetSocketAddress address = new InetSocketAddress("0.0.0.0", 8080); for testing on emulator
             InetSocketAddress address = new InetSocketAddress(8080); // for testing on Cruzr
             SSLContext sslContext = SSLContextHelper.createSSLContext(this);
-            server = new Server(address);
+            server = new Server(address, this);
             server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
             server.start();
         } catch (Exception exception) {
@@ -268,6 +283,8 @@ public class MainActivity extends AppCompatActivity {
         PeerConnectionFactory.initialize(initializationOptions);
 
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+        options.disableEncryption = false;
+        options.disableNetworkMonitor = false;
 
         VideoEncoderFactory encoderFactory = new DefaultVideoEncoderFactory(eglBase.getEglBaseContext(), true, true);
         VideoDecoderFactory decoderFactory = new DefaultVideoDecoderFactory(eglBase.getEglBaseContext());
@@ -306,15 +323,12 @@ public class MainActivity extends AppCompatActivity {
 
         videoCapturer.startCapture(1280, 720, 30);
         peerConnection = createPeerConnection();
-
-        server.setOnOfferObserver(new SDPOfferObserver(peerConnection, server));
-        server.setOnCandidateObserver(new CandidateObserver(peerConnection, server));
     }
 
     private PeerConnection createPeerConnection() {
         List<PeerConnection.IceServer> iceServers = new ArrayList<>();
         iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer());
-        return peerConnectionFactory.createPeerConnection(iceServers, new CustomPeerConnectionObserver(server, remoteView));
+        return peerConnectionFactory.createPeerConnection(iceServers, this);
     }
 
     private VideoCapturer createCameraCapture(CameraEnumerator enumerator) {
@@ -339,6 +353,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void closePeerConnection() {
+
+        if (videoCapturer != null) {
+            try {
+                videoCapturer.stopCapture();
+            } catch (InterruptedException e) {
+                Log.e("MYRTC", "Interrupt signal encountered when stopping cameraCapturer " + e);
+            }
+            videoCapturer.dispose();
+            videoCapturer = null;
+        }
+
+        // TODO: Debug
+//        remoteView.clearImage();
+//        remoteView.release();
+//        remoteView.init(eglBase.getEglBaseContext(), null);
+
         if (localVideoTrack != null) {
             localVideoTrack.dispose();
             localVideoTrack = null;
@@ -359,16 +389,14 @@ public class MainActivity extends AppCompatActivity {
             audioSource = null;
         }
 
-        remoteView.clearImage();
+        if (remoteVideoTrack != null) {
+            remoteVideoTrack.dispose();
+            remoteVideoTrack = null;
+        }
 
-        if (videoCapturer != null) {
-            try {
-                videoCapturer.stopCapture();
-            } catch (InterruptedException e) {
-                Log.e("MYRTC", "Cannot close videoCapturer " + e);
-            }
-            videoCapturer.dispose();
-            videoCapturer = null;
+        if (remoteAudioTrack != null) {
+            remoteAudioTrack.dispose();
+            remoteAudioTrack = null;
         }
 
         if (peerConnection != null) {
@@ -380,7 +408,7 @@ public class MainActivity extends AppCompatActivity {
     private void startStream() {
         MediaStream stream = peerConnectionFactory.createLocalMediaStream("CRUZR");
         stream.addTrack(localVideoTrack);
-        stream.addTrack(localAudioTrack);
+//        stream.addTrack(localAudioTrack);
         peerConnection.addStream(stream);
     }
 
@@ -395,5 +423,168 @@ public class MainActivity extends AppCompatActivity {
             permissions.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
         }
         REQUIRED_PERMISSIONS = permissions.toArray(new String[0]);
+    }
+
+    // --- Implementation of SignalingEvents ---------
+    @Override
+    public void onRemoteDescription(SessionDescription sdp) {
+        peerConnection.setRemoteDescription(new SdpObserver() {
+            @Override
+            public void onSetSuccess() {
+                peerConnection.createAnswer(new SdpObserver() {
+                    @Override
+                    public void onCreateSuccess(SessionDescription sessionDescription) {
+                        peerConnection.setLocalDescription(new SdpObserver() {
+                            @Override
+                            public void onSetSuccess() {
+                                JSONObject answer = new JSONObject();
+                                try {
+                                    answer.put("type", "answer");
+                                    answer.put("sdp", sessionDescription.description);
+                                    server.broadcast(answer.toString());
+                                } catch (JSONException e) {
+                                    Log.e("MYRTC","Invalid answer format " + e);
+                                }
+                            }
+
+                            @Override
+                            public void onSetFailure(String s) {
+                                Log.e("MYRTC", "Cannot set local SDP description " + s);
+                            }
+
+                            @Override
+                            public void onCreateSuccess(SessionDescription sessionDescription) {}
+
+                            @Override
+                            public void onCreateFailure(String s) {}
+
+                        }, sessionDescription);
+                    }
+
+                    @Override
+                    public void onCreateFailure(String s) {
+                        Log.e("MYRTC", "Cannot create SDP answer " + s);
+                    }
+
+                    @Override
+                    public void onSetSuccess() {}
+
+                    @Override
+                    public void onSetFailure(String s) {}
+                }, new MediaConstraints());
+            }
+
+            @Override
+            public void onSetFailure(String s) {
+                Log.e("MYRTC", "Cannot set remote SDP description " + s);
+            }
+
+            @Override
+            public void onCreateSuccess(SessionDescription sessionDescription) {}
+
+            @Override
+            public void onCreateFailure(String s) {}
+        }, sdp);
+    }
+
+    @Override
+    public void onRemoteIceCandidate(IceCandidate candidate) {
+        peerConnection.addIceCandidate(candidate);
+    }
+
+    // --- Implementation of PeerConnection.Observer ---------
+    @Override
+    public void onSignalingChange(PeerConnection.SignalingState signalingState) {
+        Log.i("MYRTC", "onSignalingChange " + signalingState);
+    }
+
+    @Override
+    public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
+        Log.i("MYRTC", "onIceConnectionChange " + iceConnectionState);
+    }
+
+    @Override
+    public void onIceConnectionReceivingChange(boolean b) {
+        Log.i("MYRTC", "onIceConnectionReceivingChange " + b);
+    }
+
+    @Override
+    public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
+        Log.i("MYRTC", "onIceGatheringChange " + iceGatheringState);
+    }
+
+    @Override
+    public void onIceCandidate(IceCandidate iceCandidate) {
+        Log.i("MYRTC", "onIceCandidate " + iceCandidate);
+        try {
+            JSONObject json = new JSONObject();
+            json.put("type", "candidate");
+            json.put("candidate", iceCandidate.sdp);
+            json.put("sdpMid", iceCandidate.sdpMid);
+            json.put("sdpMLineIndex", iceCandidate.sdpMLineIndex);
+            server.broadcast(json.toString());
+        } catch (JSONException e) {
+            // json.put throws JSONException when iceCandidate is a non-finite number or "iceCandidate" already existed
+            // neither of which can happen in this case
+            Log.e("MYRTC", "Invalid ICE candidate " + iceCandidate);
+        }
+    }
+
+    @Override
+    public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
+        Log.i("MYRTC", "onIceCandidatesRemoved " + Arrays.toString(iceCandidates));
+    }
+
+    @Override
+    public void onAddStream(MediaStream mediaStream) {
+        Log.i("MYRTC", "onAddStream " + mediaStream);
+        remoteVideoTrack = mediaStream.videoTracks.get(0);
+        remoteVideoTrack.setEnabled(true);
+//        remoteAudioTrack = mediaStream.audioTracks.get(0);
+//        remoteAudioTrack.setEnabled(true);
+        remoteVideoTrack.addSink(remoteView);
+    }
+
+    @Override
+    public void onRemoveStream(MediaStream mediaStream) {
+        Log.i("MYRTC", "onRemoveStream " + mediaStream);
+        remoteVideoTrack.removeSink(remoteView);
+
+        if (remoteVideoTrack != null) {
+            remoteVideoTrack.dispose();
+            remoteVideoTrack = null;
+        }
+
+        if (remoteAudioTrack != null) {
+            remoteAudioTrack.dispose();
+            remoteAudioTrack = null;
+        }
+
+        remoteView.clearImage();
+        remoteView.release();
+        remoteView.init(eglBase.getEglBaseContext(), null);
+    }
+
+    @Override
+    public void onDataChannel(DataChannel dataChannel) {
+        Log.i("MYRTC", "onDataChannel " + dataChannel);
+    }
+
+    @Override
+    public void onRenegotiationNeeded() {
+        Log.i("MYRTC", "onRenegotiationNeeded");
+    }
+
+    @Override
+    public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
+        Log.i("MYRTC", "onAddTrack " + rtpReceiver + Arrays.toString(mediaStreams));
+    }
+
+    @Override
+    public void onConnectionChange(final PeerConnection.PeerConnectionState newState) {
+        Log.i("MYRTC", "onConnectionChange " + newState);
+        if (newState == PeerConnection.PeerConnectionState.DISCONNECTED) {
+            new Handler(Looper.getMainLooper()).post(this::closePeerConnection);
+        }
     }
 }
