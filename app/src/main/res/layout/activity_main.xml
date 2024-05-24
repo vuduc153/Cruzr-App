@@ -7,136 +7,33 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/viewFinder"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
     <org.webrtc.SurfaceViewRenderer
         android:id="@+id/remoteView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
     <Button
-        android:id="@+id/showCamera"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:text="@string/open_camera"
-        app:layout_constraintBottom_toBottomOf="@+id/showRosIP"
-        app:layout_constraintEnd_toStartOf="@+id/playAudio"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/showRosIP"
-        app:layout_constraintTop_toTopOf="@+id/showRosIP" />
-
-    <Button
-        android:id="@+id/playAudio"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:text="Play audio"
-        app:layout_constraintBottom_toBottomOf="@+id/showRosIP"
-        app:layout_constraintEnd_toStartOf="@+id/dance"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/showCamera"
-        app:layout_constraintTop_toTopOf="@+id/showRosIP" />
-
-    <Button
-        android:id="@+id/dance"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:text="@string/dance"
-        app:layout_constraintBottom_toBottomOf="@+id/showRosIP"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/playAudio"
-        app:layout_constraintTop_toTopOf="@+id/showRosIP" />
-
-    <Button
-        android:id="@+id/showRosVersion"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="160dp"
-        android:text="@string/action_1"
-        app:layout_constraintEnd_toStartOf="@+id/showRosIP"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/showRosIP"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:text="@string/action_2"
-        app:layout_constraintBottom_toBottomOf="@+id/showRosVersion"
-        app:layout_constraintEnd_toStartOf="@+id/showCamera"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/showRosVersion"
-        app:layout_constraintTop_toTopOf="@+id/showRosVersion" />
-
-    <Button
-        android:id="@+id/stopMove"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:text="@string/stop_move"
-        app:layout_constraintBottom_toBottomOf="@+id/moveForward"
-        app:layout_constraintEnd_toStartOf="@+id/toggleLed"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/moveForward"
-        app:layout_constraintTop_toTopOf="@+id/moveForward" />
-
-    <Button
-        android:id="@+id/moveForward"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:text="@string/move_forward"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/stopMove"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/showRosVersion" />
-
-    <Button
-        android:id="@+id/toggleLed"
-        android:layout_width="140dp"
-        android:layout_height="wrap_content"
-        android:text="@string/toggle_led"
-        app:layout_constraintBottom_toBottomOf="@+id/stopMove"
-        app:layout_constraintEnd_toStartOf="@+id/startCall"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/stopMove"
-        app:layout_constraintTop_toTopOf="@+id/stopMove" />
-
-    <Button
         android:id="@+id/startCall"
         android:layout_width="140dp"
         android:layout_height="wrap_content"
         android:text="@string/start_call"
-        app:layout_constraintBottom_toBottomOf="@+id/stopMove"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/endCall"
         app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/toggleLed"
-        app:layout_constraintTop_toTopOf="@+id/stopMove" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.9" />
 
     <Button
         android:id="@+id/endCall"
         android:layout_width="140dp"
         android:layout_height="wrap_content"
         android:text="@string/end_call"
-        app:layout_constraintBottom_toBottomOf="@+id/stopMove"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/startCall"
-        app:layout_constraintTop_toTopOf="@+id/stopMove" />
-
-    <TextView
-        android:id="@+id/dummyText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/dummy_text"
-        android:textSize="34sp"
-        app:layout_constraintBottom_toTopOf="@+id/showRosIP"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.9" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

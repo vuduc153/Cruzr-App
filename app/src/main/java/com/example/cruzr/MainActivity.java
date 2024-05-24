@@ -3,24 +3,15 @@
 
 package com.example.cruzr;
 
-import android.content.pm.PackageManager;
-import android.media.AudioAttributes;
-import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.Preview;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.PreviewView;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -28,7 +19,6 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.cruzr.websockets.SSLContextHelper;
 import com.example.cruzr.websockets.Server;
 import com.example.cruzr.webrtc.SignalingEvents;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
@@ -58,13 +48,10 @@ import org.webrtc.VideoEncoderFactory;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 
 import javax.net.ssl.SSLContext;
 
@@ -74,10 +61,6 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     private static final String AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT = "googAutoGainControl";
     private static final String AUDIO_HIGH_PASS_FILTER_CONSTRAINT = "googHighpassFilter";
     private static final String AUDIO_NOISE_SUPPRESSION_CONSTRAINT = "googNoiseSuppression";
-    private boolean ledState = false;
-    private TextView textView;
-    private PreviewView previewView;
-    private MediaPlayer mediaPlayer;
     private Server server;
     private PeerConnectionFactory peerConnectionFactory;
     private PeerConnection peerConnection;
@@ -105,47 +88,10 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
 
         eglBase = EglBase.create();
 
-        textView = findViewById(R.id.dummyText);
-        previewView = findViewById(R.id.viewFinder);
         remoteView = findViewById(R.id.remoteView);
         remoteView.init(eglBase.getEglBaseContext(), null);
 
-        initMediaPlayer();
         startWebsocketServer();
-
-        findViewById(R.id.showRosVersion).setOnClickListener(v -> textView.setText(RosRobotApi.get().getRosVersion()));
-
-        findViewById(R.id.showRosIP).setOnClickListener(v -> textView.setText(RosRobotApi.get().getRosWifiIp()));
-
-        findViewById(R.id.moveForward).setOnClickListener(v -> {
-            int ret = RosRobotApi.get().moveToward(0.1f, 0, 0);
-            if (ret == 0) {
-                Toast.makeText(this, "Cannot perform move action", Toast.LENGTH_SHORT).show();
-            }
-            if (ret == 1) {
-                Toast.makeText(this, "Forbidden by application layer", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        findViewById(R.id.stopMove).setOnClickListener(v -> RosRobotApi.get().stopMove());
-
-        findViewById(R.id.toggleLed).setOnClickListener(v -> {
-            ledState = !ledState;
-            int ret = RosRobotApi.get().ledSetOnOff(ledState);
-            if (ret == 0) {
-                Toast.makeText(this, "Cannot change LED state", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        findViewById(R.id.showCamera).setOnClickListener(v -> {
-            boolean hasPermissions = allPermissionsGranted();
-            textView.setText(String.valueOf(hasPermissions));
-            startCamera();
-        });
-
-        findViewById(R.id.playAudio).setOnClickListener(v -> playAudio());
-
-        findViewById(R.id.dance).setOnClickListener(v -> dance());
 
         findViewById(R.id.startCall).setOnClickListener(v -> {
             if (server == null) {
@@ -164,13 +110,11 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         super.onStop();
         closePeerConnection();
         stopWebSocketServer();
-        releaseMediaPlayer();
     }
 
     @Override
     protected void onRestart() {
         super.onRestart();
-        initMediaPlayer();
         startWebsocketServer();
     }
 
@@ -179,76 +123,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         RosRobotApi.get().destory();
         closePeerConnection();
         stopWebSocketServer();
-        releaseMediaPlayer();
         super.onDestroy();
-    }
-
-    private boolean allPermissionsGranted() {
-        for (String permission : REQUIRED_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this.getBaseContext(), permission) != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-        cameraProviderFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(previewView.getSurfaceProvider());
-                CameraSelector cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
-                cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, preview);
-            } catch (CancellationException | ExecutionException | InterruptedException e) {
-                Log.e("CAMERA", "Camera provider future failed " + e);
-            } catch (IllegalStateException | IllegalArgumentException e) {
-                Log.e("CAMERA", "Binding failed " + e);
-            } finally {
-                Toast.makeText(this, "Could not open camera", Toast.LENGTH_SHORT).show();
-            }
-        }, ContextCompat.getMainExecutor(this));
-    }
-
-    private void playAudio() {
-        if (mediaPlayer == null) initMediaPlayer();
-        String audioUrl = "https://www2.cs.uic.edu/~i101/SoundFiles/CantinaBand3.wav";
-        try {
-            mediaPlayer.stop();
-            mediaPlayer.reset();
-            mediaPlayer.setDataSource(audioUrl);
-            mediaPlayer.setOnPreparedListener(MediaPlayer::start);
-            mediaPlayer.prepareAsync();
-        } catch (IllegalArgumentException | IOException e) {
-            Log.e("AUDIO", "Audio source not found " + e);
-        } finally {
-            Toast.makeText(this, "Could not open audio source", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void dance() {
-        int ret = RosRobotApi.get().run("cute");
-        if (ret == 0) {
-            Toast.makeText(this, "Cannot perform action", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void initMediaPlayer() {
-        mediaPlayer = new MediaPlayer();
-        mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .build());
-    }
-
-    private void releaseMediaPlayer() {
-        if (mediaPlayer != null) {
-            mediaPlayer.stop();
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
     }
 
     private void startWebsocketServer() {
@@ -354,6 +229,8 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
 
     private void closePeerConnection() {
 
+        remoteView.clearImage();
+
         if (videoCapturer != null) {
             try {
                 videoCapturer.stopCapture();
@@ -363,11 +240,6 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
             videoCapturer.dispose();
             videoCapturer = null;
         }
-
-        // TODO: Debug
-//        remoteView.clearImage();
-//        remoteView.release();
-//        remoteView.init(eglBase.getEglBaseContext(), null);
 
         if (localVideoTrack != null) {
             localVideoTrack.dispose();
@@ -408,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     private void startStream() {
         MediaStream stream = peerConnectionFactory.createLocalMediaStream("CRUZR");
         stream.addTrack(localVideoTrack);
-//        stream.addTrack(localAudioTrack);
+        stream.addTrack(localAudioTrack);
         peerConnection.addStream(stream);
     }
 
@@ -538,19 +410,23 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     @Override
     public void onAddStream(MediaStream mediaStream) {
         Log.i("MYRTC", "onAddStream " + mediaStream);
-        remoteVideoTrack = mediaStream.videoTracks.get(0);
-        remoteVideoTrack.setEnabled(true);
-//        remoteAudioTrack = mediaStream.audioTracks.get(0);
-//        remoteAudioTrack.setEnabled(true);
-        remoteVideoTrack.addSink(remoteView);
+        if (!mediaStream.videoTracks.isEmpty()) {
+            remoteVideoTrack = mediaStream.videoTracks.get(0);
+            remoteVideoTrack.setEnabled(true);
+            remoteVideoTrack.addSink(remoteView);
+        }
+        if (!mediaStream.audioTracks.isEmpty()) {
+            remoteAudioTrack = mediaStream.audioTracks.get(0);
+            remoteAudioTrack.setEnabled(true);
+        }
     }
 
     @Override
     public void onRemoveStream(MediaStream mediaStream) {
         Log.i("MYRTC", "onRemoveStream " + mediaStream);
-        remoteVideoTrack.removeSink(remoteView);
 
         if (remoteVideoTrack != null) {
+            remoteVideoTrack.removeSink(remoteView);
             remoteVideoTrack.dispose();
             remoteVideoTrack = null;
         }
@@ -561,8 +437,6 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         }
 
         remoteView.clearImage();
-        remoteView.release();
-        remoteView.init(eglBase.getEglBaseContext(), null);
     }
 
     @Override

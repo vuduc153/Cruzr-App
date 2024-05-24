@@ -12,7 +12,8 @@ public class RobotCommandInvoker {
     private static RobotCommandInvoker instance;
     private final Map<String, RobotCommand> commandRegistry  = new HashMap<String, RobotCommand>() {{
         put("move", new MoveCommand());
-        put("stop", new StopCommand());
+        put("preset", new PresetCommand());
+        put("expression", new ExpressionCommand());
     }};
 
     private RobotCommandInvoker() {}
