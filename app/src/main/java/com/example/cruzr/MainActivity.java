@@ -33,6 +33,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
+import org.webrtc.Camera1Enumerator;
 import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
 import org.webrtc.DataChannel;
@@ -205,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
                 .setVideoEncoderFactory(encoderFactory)
                 .createPeerConnectionFactory();
 
-        videoCapturer = createCameraCapture(new Camera2Enumerator(this));
+        videoCapturer = createCameraCapture(new Camera1Enumerator(false));
         if (videoCapturer == null) {
             Log.e("MYRTC", "Cannot find camera capture");
             return;
