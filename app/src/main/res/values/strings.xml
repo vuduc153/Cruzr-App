@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Cruzr</string>
-    <string name="end_call">End call</string>
-    <string name="start_call">Start call</string>
+    <string name="end_call">Disconnect</string>
+    <string name="start_call">Start server</string>
+    <string name="server_status">Server status:\u0020</string>
+    <string name="offline_status">offline</string>
+    <string name="online_status">online</string>
 </resources>

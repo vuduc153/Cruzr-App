@@ -3,16 +3,23 @@
 
 package com.example.cruzr;
 
+import android.content.Context;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.format.Formatter;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
+import androidx.core.text.HtmlCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
@@ -73,6 +80,11 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     private AudioTrack remoteAudioTrack;
     private SurfaceViewRenderer remoteView;
     private EglBase eglBase;
+    private TextView statusLabel;
+    private TextView statusText;
+    private TextView ipText;
+    private Button connectBtn;
+    private Button disconnectBtn;
 
 
     @Override
@@ -91,39 +103,62 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         remoteView = findViewById(R.id.remoteView);
         remoteView.init(eglBase.getEglBaseContext(), null);
 
-        startWebsocketServer();
+        statusLabel = findViewById(R.id.statusLabel);
+        statusText = findViewById(R.id.statusText);
+        ipText = findViewById(R.id.ipText);
+        connectBtn = findViewById(R.id.startCall);
+        disconnectBtn = findViewById(R.id.endCall);
 
-        findViewById(R.id.startCall).setOnClickListener(v -> {
-            if (server == null) {
-                Toast.makeText(this, "Websocket server is not running", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            setupPeerConnection();
-            startStream();
+        connectBtn.setOnClickListener(v -> {
+            startWebsocketServer();
+            String status = String.format("<font color='%s'>online</font>", getResources().getColor(R.color.green));
+            String ip = "Running on " + getAndroidIP();
+            statusText.setText(HtmlCompat.fromHtml(status, HtmlCompat.FROM_HTML_MODE_LEGACY));
+            ipText.setText(ip);
+            connectBtn.setVisibility(View.GONE);
+            disconnectBtn.setVisibility(View.VISIBLE);
         });
 
-        findViewById(R.id.endCall).setOnClickListener(v -> closePeerConnection());
+        disconnectBtn.setOnClickListener(v -> {
+            connectionCleanup();
+            String status = String.format("<font color='%s'>offline</font>", getResources().getColor(R.color.red));
+            statusText.setText(HtmlCompat.fromHtml(status, HtmlCompat.FROM_HTML_MODE_LEGACY));
+            ipText.setText("");
+            disconnectBtn.setVisibility(View.GONE);
+            connectBtn.setVisibility(View.VISIBLE);
+        });
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        closePeerConnection();
-        stopWebSocketServer();
-    }
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        startWebsocketServer();
+        connectionCleanup();
     }
 
     @Override
     protected void onDestroy() {
         RosRobotApi.get().destory();
-        closePeerConnection();
-        stopWebSocketServer();
+        connectionCleanup();
         super.onDestroy();
+    }
+
+    @SuppressWarnings("deprecation")
+    private String getAndroidIP() {
+        WifiManager wifiManager = (WifiManager) this.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        int ip = wifiManager.getConnectionInfo().getIpAddress();
+        return Formatter.formatIpAddress(ip);
+    }
+
+    private void showPlaceholder() {
+        statusLabel.setVisibility(View.VISIBLE);
+        statusText.setVisibility(View.VISIBLE);
+        ipText.setVisibility(View.VISIBLE);
+    }
+
+    private void hidePlaceholder() {
+        statusLabel.setVisibility(View.GONE);
+        statusText.setVisibility(View.GONE);
+        ipText.setVisibility(View.GONE);
     }
 
     private void startWebsocketServer() {
@@ -227,9 +262,17 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         return null;
     }
 
+    private void startStream() {
+        MediaStream stream = peerConnectionFactory.createLocalMediaStream("CRUZR");
+        stream.addTrack(localVideoTrack);
+        stream.addTrack(localAudioTrack);
+        peerConnection.addStream(stream);
+    }
+
     private void closePeerConnection() {
 
         remoteView.clearImage();
+        showPlaceholder();
 
         if (videoCapturer != null) {
             try {
@@ -277,11 +320,9 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         }
     }
 
-    private void startStream() {
-        MediaStream stream = peerConnectionFactory.createLocalMediaStream("CRUZR");
-        stream.addTrack(localVideoTrack);
-        stream.addTrack(localAudioTrack);
-        peerConnection.addStream(stream);
+    private void connectionCleanup() {
+        closePeerConnection();
+        stopWebSocketServer();
     }
 
     public static final String[] REQUIRED_PERMISSIONS;
@@ -364,6 +405,12 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         peerConnection.addIceCandidate(candidate);
     }
 
+    @Override
+    public void onServerStart() {
+        setupPeerConnection();
+        startStream();
+    }
+
     // --- Implementation of PeerConnection.Observer ---------
     @Override
     public void onSignalingChange(PeerConnection.SignalingState signalingState) {
@@ -414,6 +461,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
             remoteVideoTrack = mediaStream.videoTracks.get(0);
             remoteVideoTrack.setEnabled(true);
             remoteVideoTrack.addSink(remoteView);
+            new Handler(Looper.getMainLooper()).post(this::hidePlaceholder);
         }
         if (!mediaStream.audioTracks.isEmpty()) {
             remoteAudioTrack = mediaStream.audioTracks.get(0);
@@ -437,6 +485,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         }
 
         remoteView.clearImage();
+        new Handler(Looper.getMainLooper()).post(this::showPlaceholder);
     }
 
     @Override

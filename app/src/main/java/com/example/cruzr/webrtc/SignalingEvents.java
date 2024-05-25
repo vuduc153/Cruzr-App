@@ -11,5 +11,6 @@ public interface SignalingEvents {
 
     void onRemoteIceCandidate(final IceCandidate candidate);
 
+    void onServerStart();
     // other methods if necessary
 }

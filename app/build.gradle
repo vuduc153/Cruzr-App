@@ -6,6 +6,7 @@ android {
     namespace 'com.example.cruzr'
     compileSdk 34
 
+    // targeted SDK version for Cruzr v2.357.1.136
     defaultConfig {
         applicationId "com.example.cruzr"
         minSdkVersion 21
