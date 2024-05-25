@@ -34,7 +34,6 @@ import org.json.JSONObject;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
 import org.webrtc.Camera1Enumerator;
-import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
 import org.webrtc.DataChannel;
 import org.webrtc.DefaultVideoDecoderFactory;
@@ -111,22 +110,14 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         disconnectBtn = findViewById(R.id.endCall);
 
         connectBtn.setOnClickListener(v -> {
-            startWebsocketServer();
-            String status = String.format("<font color='%s'>online</font>", getResources().getColor(R.color.green));
-            String ip = "Running on " + getAndroidIP();
-            statusText.setText(HtmlCompat.fromHtml(status, HtmlCompat.FROM_HTML_MODE_LEGACY));
-            ipText.setText(ip);
-            connectBtn.setVisibility(View.GONE);
-            disconnectBtn.setVisibility(View.VISIBLE);
+            startWebsocketServer(); // start the websocket server and open a PeerConnection onServerStart
+            setTextOffline();
         });
 
         disconnectBtn.setOnClickListener(v -> {
             connectionCleanup();
-            String status = String.format("<font color='%s'>offline</font>", getResources().getColor(R.color.red));
-            statusText.setText(HtmlCompat.fromHtml(status, HtmlCompat.FROM_HTML_MODE_LEGACY));
-            ipText.setText("");
-            disconnectBtn.setVisibility(View.GONE);
-            connectBtn.setVisibility(View.VISIBLE);
+            setTextOnline();
+            showPlaceholder();
         });
     }
 
@@ -160,6 +151,23 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         statusLabel.setVisibility(View.GONE);
         statusText.setVisibility(View.GONE);
         ipText.setVisibility(View.GONE);
+    }
+
+    private void setTextOffline() {
+        String status = String.format("<font color='%s'>online</font>", getResources().getColor(R.color.green));
+        String ip = "Running on " + getAndroidIP();
+        statusText.setText(HtmlCompat.fromHtml(status, HtmlCompat.FROM_HTML_MODE_LEGACY));
+        ipText.setText(ip);
+        connectBtn.setVisibility(View.GONE);
+        disconnectBtn.setVisibility(View.VISIBLE);
+    }
+
+    private void setTextOnline() {
+        String status = String.format("<font color='%s'>offline</font>", getResources().getColor(R.color.red));
+        statusText.setText(HtmlCompat.fromHtml(status, HtmlCompat.FROM_HTML_MODE_LEGACY));
+        ipText.setText("");
+        disconnectBtn.setVisibility(View.GONE);
+        connectBtn.setVisibility(View.VISIBLE);
     }
 
     private void startWebsocketServer() {
@@ -273,7 +281,6 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     private void closePeerConnection() {
 
         remoteView.clearImage();
-        showPlaceholder();
 
         if (videoCapturer != null) {
             try {
@@ -473,20 +480,6 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     @Override
     public void onRemoveStream(MediaStream mediaStream) {
         Log.i("MYRTC", "onRemoveStream " + mediaStream);
-
-        if (remoteVideoTrack != null) {
-            remoteVideoTrack.removeSink(remoteView);
-            remoteVideoTrack.dispose();
-            remoteVideoTrack = null;
-        }
-
-        if (remoteAudioTrack != null) {
-            remoteAudioTrack.dispose();
-            remoteAudioTrack = null;
-        }
-
-        remoteView.clearImage();
-        new Handler(Looper.getMainLooper()).post(this::showPlaceholder);
     }
 
     @Override
@@ -508,7 +501,10 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     public void onConnectionChange(final PeerConnection.PeerConnectionState newState) {
         Log.i("MYRTC", "onConnectionChange " + newState);
         if (newState == PeerConnection.PeerConnectionState.DISCONNECTED) {
-            new Handler(Looper.getMainLooper()).post(this::closePeerConnection);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                remoteView.clearImage();
+                showPlaceholder();
+            });
         }
     }
 }
