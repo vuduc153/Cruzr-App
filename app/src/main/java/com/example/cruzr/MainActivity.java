@@ -469,7 +469,6 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
             remoteVideoTrack = mediaStream.videoTracks.get(0);
             remoteVideoTrack.setEnabled(true);
             remoteVideoTrack.addSink(remoteView);
-            new Handler(Looper.getMainLooper()).post(this::hidePlaceholder);
         }
         if (!mediaStream.audioTracks.isEmpty()) {
             remoteAudioTrack = mediaStream.audioTracks.get(0);
@@ -505,6 +504,9 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
                 remoteView.clearImage();
                 showPlaceholder();
             });
+        }
+        if (newState == PeerConnection.PeerConnectionState.CONNECTED) {
+            new Handler(Looper.getMainLooper()).post(this::hidePlaceholder);
         }
     }
 }
