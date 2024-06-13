@@ -14,6 +14,7 @@ public class RobotCommandInvoker {
         put("move", new MoveCommand());
         put("preset", new PresetCommand());
         put("expression", new ExpressionCommand());
+        put("navigation", new NavigationCommand());
     }};
 
     private RobotCommandInvoker() {}
