@@ -238,7 +238,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
         localAudioTrack.setEnabled(true);
 
-        videoCapturer.startCapture(1280, 720, 30);
+        videoCapturer.startCapture(2560, 1440, 24);
         peerConnection = createPeerConnection();
     }
 
