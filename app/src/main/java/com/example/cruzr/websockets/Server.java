@@ -2,13 +2,11 @@ package com.example.cruzr.websockets;
 
 import android.util.Log;
 
-import com.example.cruzr.robot.RobotCommandInvoker;
 import com.example.cruzr.webrtc.SignalingEvents;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.IceCandidate;
@@ -18,13 +16,11 @@ import java.net.InetSocketAddress;
 
 public class Server extends WebSocketServer {
 
-    private final RobotCommandInvoker api;
     private final SignalingEvents events;
 
     public Server(InetSocketAddress address, SignalingEvents events) {
         super(address);
         this.events = events;
-        api = RobotCommandInvoker.getInstance();
     }
 
     @Override
@@ -53,9 +49,6 @@ public class Server extends WebSocketServer {
                 events.onRemoteIceCandidate(new IceCandidate(candidate.getString("sdpMid"),
                         candidate.getInt("sdpMLineIndex"),
                         candidate.getString("candidate")));
-            } else {
-                JSONArray parameters = obj.getJSONArray("params");
-                api.execute(type, parameters);
             }
         } catch (JSONException exception) {
             Log.e("SERVER", "Invalid message from Websocket client " + exception);

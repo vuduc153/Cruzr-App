@@ -40,7 +40,6 @@ android {
 dependencies {
 
 //    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    api files('libs/cruzr-sdk-0.1.8.jar')
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity

@@ -26,7 +26,6 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.cruzr.websockets.SSLContextHelper;
 import com.example.cruzr.websockets.Server;
 import com.example.cruzr.webrtc.SignalingEvents;
-import com.ubtechinc.cruzr.sdk.ros.RosRobotApi;
 
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.json.JSONException;
@@ -129,7 +128,6 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
 
     @Override
     protected void onDestroy() {
-        RosRobotApi.get().destory();
         connectionCleanup();
         super.onDestroy();
     }
