@@ -23,11 +23,9 @@ import androidx.core.text.HtmlCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.cruzr.websockets.SSLContextHelper;
 import com.example.cruzr.websockets.Server;
 import com.example.cruzr.webrtc.SignalingEvents;
 
-import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.AudioSource;
@@ -58,8 +56,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import javax.net.ssl.SSLContext;
 
 public class MainActivity extends AppCompatActivity implements SignalingEvents, PeerConnection.Observer {
 
@@ -172,9 +168,8 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         try {
 //            InetSocketAddress address = new InetSocketAddress("0.0.0.0", 8080); for testing on emulator
             InetSocketAddress address = new InetSocketAddress(8080); // for testing on Cruzr
-            SSLContext sslContext = SSLContextHelper.createSSLContext(this);
             server = new Server(address, this);
-            server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
+            server.setReuseAddr(true);
             server.start();
         } catch (Exception exception) {
             stopWebSocketServer();
@@ -238,7 +233,8 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
         localAudioTrack.setEnabled(true);
 
-        videoCapturer.startCapture(2560, 1440, 24);
+//        videoCapturer.startCapture(2560, 1440, 24); // for higher-end devices
+        videoCapturer.startCapture(1280, 720, 15); // for Cruzr and lower-end devices
         peerConnection = createPeerConnection();
     }
 
