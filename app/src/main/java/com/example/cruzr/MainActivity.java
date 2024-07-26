@@ -4,6 +4,8 @@
 package com.example.cruzr;
 
 import android.content.Context;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,7 +32,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
-import org.webrtc.Camera1Enumerator;
+import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
 import org.webrtc.DataChannel;
 import org.webrtc.DefaultVideoDecoderFactory;
@@ -63,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     private static final String AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT = "googAutoGainControl";
     private static final String AUDIO_HIGH_PASS_FILTER_CONSTRAINT = "googHighpassFilter";
     private static final String AUDIO_NOISE_SUPPRESSION_CONSTRAINT = "googNoiseSuppression";
+    private AudioManager audioManager;
     private Server server;
     private PeerConnectionFactory peerConnectionFactory;
     private PeerConnection peerConnection;
@@ -92,6 +95,18 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        // Set audio output to speakerphone -- otherwise sound could be directed to earpiece speaker on mobile devices
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        audioManager.setMode(AudioManager.MODE_NORMAL);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            List < AudioDeviceInfo > devices = audioManager.getAvailableCommunicationDevices();
+            for (AudioDeviceInfo device: devices) {
+                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                    audioManager.setCommunicationDevice(device);
+                }
+            }
+        }
 
         eglBase = EglBase.create();
 
@@ -207,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
                 .setVideoEncoderFactory(encoderFactory)
                 .createPeerConnectionFactory();
 
-        videoCapturer = createCameraCapture(new Camera1Enumerator(false));
+        videoCapturer = createCameraCapture(new Camera2Enumerator(this));
         if (videoCapturer == null) {
             Log.e("MYRTC", "Cannot find camera capture");
             return;
@@ -234,7 +249,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         localAudioTrack.setEnabled(true);
 
 //        videoCapturer.startCapture(2560, 1440, 24); // for higher-end devices
-        videoCapturer.startCapture(1280, 720, 15); // for Cruzr and lower-end devices
+        videoCapturer.startCapture(1280, 720, 24); // for Cruzr and lower-end devices
         peerConnection = createPeerConnection();
     }
 
