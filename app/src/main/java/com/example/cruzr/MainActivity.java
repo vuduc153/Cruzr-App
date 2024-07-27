@@ -98,11 +98,14 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
 
         // Set audio output to speakerphone -- otherwise sound could be directed to earpiece speaker on mobile devices
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        audioManager.setMode(AudioManager.MODE_NORMAL);
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            List < AudioDeviceInfo > devices = audioManager.getAvailableCommunicationDevices();
+            List <AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
             for (AudioDeviceInfo device: devices) {
                 if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                    audioManager.setCommunicationDevice(device);
+                } // if bluetooth devices connected, set it as the audio source
+                if (device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
                     audioManager.setCommunicationDevice(device);
                 }
             }
