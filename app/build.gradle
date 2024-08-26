@@ -48,5 +48,6 @@ dependencies {
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
     implementation "org.java-websocket:Java-WebSocket:1.5.2"
-    implementation "org.webrtc:google-webrtc:1.0.+"
+//    implementation "org.webrtc:google-webrtc:1.0.+"
+    implementation "com.dafruits:webrtc:123.0.0"
 }

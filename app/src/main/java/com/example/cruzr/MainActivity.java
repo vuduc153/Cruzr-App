@@ -284,10 +284,8 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     }
 
     private void startStream() {
-        MediaStream stream = peerConnectionFactory.createLocalMediaStream("CRUZR");
-        stream.addTrack(localVideoTrack);
-        stream.addTrack(localAudioTrack);
-        peerConnection.addStream(stream);
+        peerConnection.addTrack(localAudioTrack);
+        peerConnection.addTrack(localVideoTrack);
     }
 
     private void closePeerConnection() {
