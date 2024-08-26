@@ -234,7 +234,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         localAudioTrack.setEnabled(true);
 
 //        videoCapturer.startCapture(2560, 1440, 24); // for higher-end devices
-        videoCapturer.startCapture(1280, 720, 15); // for Cruzr and lower-end devices
+        videoCapturer.startCapture(1280, 720, 24); // for Cruzr and lower-end devices
         peerConnection = createPeerConnection();
     }
 
