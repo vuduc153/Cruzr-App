@@ -3,7 +3,11 @@
 
 package com.example.cruzr;
 
+import android.bluetooth.BluetoothA2dp;
+import android.bluetooth.BluetoothHeadset;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.net.wifi.WifiManager;
@@ -25,6 +29,7 @@ import androidx.core.text.HtmlCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.cruzr.audio.BluetoothReceiver;
 import com.example.cruzr.websockets.Server;
 import com.example.cruzr.webrtc.SignalingEvents;
 
@@ -98,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
 
         // Set audio output to speakerphone -- otherwise sound could be directed to earpiece speaker on mobile devices
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+//        audioManager.setMode(AudioManager.MODE_NORMAL);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             List <AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
             for (AudioDeviceInfo device: devices) {
@@ -110,6 +115,12 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
                 }
             }
         }
+
+        BluetoothReceiver bluetoothReceiver;
+        bluetoothReceiver = new BluetoothReceiver();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
+        registerReceiver(bluetoothReceiver, filter);
 
         eglBase = EglBase.create();
 
