@@ -19,6 +19,7 @@ import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -86,8 +87,10 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
     private TextView statusLabel;
     private TextView statusText;
     private TextView ipText;
+    private ImageView imageOverlay;
     private Button connectBtn;
     private Button disconnectBtn;
+    private int tapCount = 0;
 
 
     @Override
@@ -130,8 +133,24 @@ public class MainActivity extends AppCompatActivity implements SignalingEvents, 
         statusLabel = findViewById(R.id.statusLabel);
         statusText = findViewById(R.id.statusText);
         ipText = findViewById(R.id.ipText);
+        imageOverlay = findViewById(R.id.imageOverlay);
         connectBtn = findViewById(R.id.startCall);
         disconnectBtn = findViewById(R.id.endCall);
+
+        remoteView.setOnClickListener(v -> {
+            tapCount++;
+            if (tapCount == 3) {
+                imageOverlay.setVisibility(View.VISIBLE);
+                tapCount = 0;
+            }
+        });
+
+        imageOverlay.setOnClickListener(v -> {
+            if (imageOverlay.getVisibility() == View.VISIBLE) {
+                // Hide the image overlay when it is tapped
+                imageOverlay.setVisibility(View.GONE);
+            }
+        });
 
         connectBtn.setOnClickListener(v -> {
             startWebsocketServer(); // start the websocket server and open a PeerConnection onServerStart
