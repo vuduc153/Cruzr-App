@@ -9,7 +9,7 @@ In general, the code in the `tiago` branch is more stable than in the `master` b
 
 ## Compilation
 
-The app can be compiled into an APK and installed on the robots' onboard tablets. The code has been developed and tested with the relatively outdated Gradle v8.6 and Android SDK 21 to ensure compatibility with the OS version running on the Cruzr robot. If you're working with a different build environment, you may need to downgrade your tools to match these versions in order to compile successfully.
+The app can be compiled into an APK and installed on the robots' onboard tablets. The code has been developed and tested with the relatively outdated **Gradle v8.6** and **Android SDK 21** to ensure compatibility with the OS version running on the Cruzr robot. If you're working with a different build environment, you may need to downgrade your tools to match these versions in order to compile successfully.
 
 ## Cruzr App Details
 
@@ -19,4 +19,4 @@ The Cruzr app relies on the **Cruzr SDK version 0.1.8**, which is included in th
 
 ### Deployment
 
-To deploy the app to the Cruzr robot's onboard tablet, you will need a specific `adbkey` file. This key can also be obtained from Telstra upon request, as it is required for secure deployment via ADB (Android Debug Bridge).
+To deploy the app to the Cruzr robot's onboard tablet, you will need a specific **adbkey** file. This key can also be obtained from Telstra upon request, as it is required for secure deployment via ADB (Android Debug Bridge).
