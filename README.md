@@ -1,4 +1,4 @@
-# Cruzr App
+# Telepresence Robot App
 
 This repository contains the codebase for the Android app that runs on the Cruzr and Tiago robots. The app mainly handles teleconferencing functionality, with some additional robot-specific features in their corresponding branches.
 
